@@ -58,8 +58,10 @@ def save_state(s):
 
 
 def feed_rows():
-    import yfinance as yf
+    import yfinance as yf, pandas as pd
     df = yf.download("NQ=F", period="5d", interval="15m", progress=False, auto_adjust=False)
+    if isinstance(df.columns, pd.MultiIndex):          # newer yfinance returns multi-index columns
+        df.columns = df.columns.get_level_values(0)
     rows = [(ts.to_pydatetime().replace(tzinfo=None), float(r["Open"]), float(r["High"]),
              float(r["Low"]), float(r["Close"])) for ts, r in df.iterrows()]
     return rows, (rows[-1][0] if rows else None)
