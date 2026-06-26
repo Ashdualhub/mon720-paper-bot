@@ -1,0 +1,29 @@
+name: mon720-paper-bot
+on:
+  schedule:
+    - cron: '*/20 * * * 1-5'        # every 20 min, Mon-Fri (UTC). GitHub may delay; fine for paper.
+  workflow_dispatch: {}             # lets you run it manually from the Actions tab
+permissions:
+  contents: write                   # to commit the bot's state back to the repo
+concurrency: mon720                 # never overlap two runs
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: '3.11' }
+      - run: pip install -r requirements_live.txt
+      - name: run the bot once
+        env:
+          TRADERSPOST_WEBHOOK: ${{ secrets.TRADERSPOST_WEBHOOK }}
+        run: python bot.py --once
+      - name: persist state (only if it changed)
+        run: |
+          if [ -n "$(git status --porcelain mon720_live_state.json)" ]; then
+            git config user.name  "mon720-bot"
+            git config user.email "bot@users.noreply.github.com"
+            git add mon720_live_state.json
+            git commit -m "state $(date -u +%FT%TZ)"
+            git push
+          else echo "no state change"; fi
